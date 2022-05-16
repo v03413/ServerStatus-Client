@@ -26,10 +26,10 @@ const PingCm = "cm.tz.cloudcpp.com"
 
 type Client struct {
 	Server   string
-	Port     int
+	Port     uint64
 	Username string
 	Password string
-	Interval uint
+	Interval uint64
 	Protocol string
 	conn     net.Conn
 	baseInfo struct {
@@ -50,11 +50,18 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	log.Println("服务器连接成功")
+	log.Println("服务器授权成功")
 
 	go c.startPing()
+	go c.startRun()
 
-	defer c.conn.Close()
+	return nil
+}
+func (c *Client) startRun() {
+	defer func(conn net.Conn) {
+		_ = conn.Close()
+
+	}(c.conn)
 
 	for range time.Tick(time.Second * time.Duration(c.Interval)) {
 		var update = c.getUpdateInfo()
@@ -72,8 +79,6 @@ func (c *Client) Start() error {
 			}
 		}
 	}
-
-	return nil
 }
 func (c *Client) connectServer() error {
 	var recvData = make([]byte, 1024)
@@ -102,7 +107,7 @@ func (c *Client) connectServer() error {
 			return err
 		}
 
-		if !strings.Contains(string(recvData), "Authentication successful") {
+		if !strings.HasPrefix(string(recvData), "Authentication successful") {
 
 			return errors.New("服务器拒绝授权")
 		}
@@ -113,7 +118,7 @@ func (c *Client) connectServer() error {
 			return err
 		}
 
-		if !strings.Contains(string(recvData), "You are connecting via") {
+		if !strings.HasPrefix(string(recvData), "You are connecting via") {
 
 			return errors.New("服务器授权失败，未知错误")
 		}
@@ -153,7 +158,7 @@ func (c *Client) initiation() error {
 	}
 	if c.Interval == 0 {
 
-		c.Port = DefaultInterval
+		c.Interval = DefaultInterval
 	}
 
 	c.pingTime = make(map[string]uint)

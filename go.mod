@@ -2,10 +2,7 @@ module ServerStatus-Client
 
 go 1.18
 
-require (
-	github.com/eapache/queue v1.1.0
-	github.com/shirou/gopsutil v2.21.11+incompatible
-)
+require github.com/shirou/gopsutil v2.21.11+incompatible
 
 require (
 	github.com/go-ole/go-ole v1.2.6 // indirect

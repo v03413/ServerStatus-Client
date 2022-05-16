@@ -2,26 +2,47 @@ package main
 
 import (
 	client2 "ServerStatus-Client/client"
-	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"runtime"
+	"strconv"
+	"strings"
+	"syscall"
 )
 
 func main() {
-	var server = "192.168.2.120"
-	var port = 5566
-	var username = "r2s"
-	var password = "123234zxc"
-	var interval = 1
-	var client = client2.Client{
-		Server:   server,
-		Port:     port,
-		Username: username,
-		Password: password,
-		Interval: uint(interval),
+	var client = client2.Client{}
+
+	for _, v := range os.Args {
+		if strings.HasPrefix(v, "SERVER=") {
+
+			client.Server = strings.TrimSpace(strings.Split(v, "SERVER=")[1])
+		}
+		if strings.HasPrefix(v, "PORT=") {
+
+			client.Port, _ = strconv.ParseUint(strings.TrimSpace(strings.Split(v, "PORT=")[1]), 10, 64)
+		}
+		if strings.HasPrefix(v, "USERNAME=") {
+
+			client.Username = strings.TrimSpace(strings.Split(v, "USERNAME=")[1])
+		}
+		if strings.HasPrefix(v, "PASSWORD=") {
+
+			client.Password = strings.TrimSpace(strings.Split(v, "PASSWORD=")[1])
+		}
 	}
 
 	err := client.Start()
 	if err != nil {
 
-		fmt.Println(err.Error())
+		log.Println(err.Error())
+	}
+
+	runtime.GC()
+	{
+		osSignals := make(chan os.Signal, 1)
+		signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
+		<-osSignals
 	}
 }
