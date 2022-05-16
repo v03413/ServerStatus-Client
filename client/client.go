@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/shirou/gopsutil/load"
 	"log"
@@ -81,54 +80,42 @@ func (c *Client) startRun() {
 	}
 }
 func (c *Client) connectServer() error {
-	var recvData = make([]byte, 1024)
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%v", c.Server, c.Port))
+	var recvData = make([]byte, 128)
+	var timeout = time.Second * 5
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%v", c.Server, c.Port), timeout)
 	if err != nil {
 
 		return err
 	}
 
-	_, err = conn.Read(recvData)
-	if err != nil {
-
-		return err
-	}
-
-	if strings.Contains(string(recvData), "Authentication required") {
-		_, err := conn.Write([]byte(fmt.Sprintf("%s:%s\n", c.Username, c.Password)))
-		if err != nil {
-
-			return err
-		}
-
+	for {
+		_ = conn.SetReadDeadline(time.Now().Add(timeout))
+		_ = conn.SetWriteDeadline(time.Now().Add(timeout))
 		_, err = conn.Read(recvData)
 		if err != nil {
 
 			return err
 		}
 
-		if !strings.HasPrefix(string(recvData), "Authentication successful") {
+		if strings.Contains(string(recvData), "Authentication required") {
+			_, err := conn.Write([]byte(fmt.Sprintf("%s:%s\n", c.Username, c.Password)))
+			if err != nil {
 
-			return errors.New("服务器拒绝授权")
+				return err
+			}
+
+			continue
 		}
 
-		_, err = conn.Read(recvData)
-		if err != nil {
+		if strings.Contains(string(recvData), "You are connecting via") {
+			if !strings.Contains(string(recvData), "IPv4") {
+				c.baseInfo.checkIp = 4
+			} else {
+				c.baseInfo.checkIp = 6
+			}
 
-			return err
+			break
 		}
-
-		if !strings.HasPrefix(string(recvData), "You are connecting via") {
-
-			return errors.New("服务器授权失败，未知错误")
-		}
-
-	}
-
-	if !strings.Contains(string(recvData), "IPv4") {
-		c.baseInfo.checkIp = 4
-	} else {
-		c.baseInfo.checkIp = 6
 	}
 
 	c.conn = conn
