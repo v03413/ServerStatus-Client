@@ -81,10 +81,43 @@ func getOpenWrtTupd() tupdStat {
 	}
 }
 func getLinuxTupd() tupdStat {
-	// 这里偷懒了，有空再说吧
-	return getOpenWrtTupd()
+	var tcp, udp, process, thread uint64
 
-	//return tupdStat{}
+	cmd := exec.Command("bash", "-c", "ss -t | wc -l")
+	if out, err := cmd.CombinedOutput(); err != nil {
+
+		log.Println(err.Error())
+	} else {
+		tcp, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
+	}
+
+	cmd = exec.Command("bash", "-c", "ss -u | wc -l")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		log.Println(err.Error())
+	} else {
+		udp, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
+	}
+
+	cmd = exec.Command("bash", "-c", "ps -ef | wc -l")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		log.Println(err.Error())
+	} else {
+		process, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
+	}
+
+	cmd = exec.Command("bash", "-c", "ps -eLf | wc -l")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		log.Println(err.Error())
+	} else {
+		thread, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
+	}
+
+	return tupdStat{
+		tcp:     uint(tcp - 1),
+		udp:     uint(udp - 1),
+		process: uint(process - 1),
+		thread:  uint(thread - 1),
+	}
 }
 func getWinTupd() tupdStat {
 
