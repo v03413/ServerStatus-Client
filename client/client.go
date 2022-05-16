@@ -17,8 +17,8 @@ const DefaultUsername = "s01"
 const DefaultPassword = "USER_DEFAULT_PASSWORD"
 const DefaultProtocol = "ip4"
 const PingPacketHistoryLen = 100
-const ProbePort = 80
 
+const ProbePort = 80
 const PingCu = "cu.tz.cloudcpp.com"
 const PingCt = "ct.tz.cloudcpp.com"
 const PingCm = "cm.tz.cloudcpp.com"
@@ -81,13 +81,16 @@ func (c *Client) startRun() {
 }
 func (c *Client) connectServer() error {
 	var recvData = make([]byte, 128)
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%v", c.Server, c.Port))
+	var timeout = time.Second * 5
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%v", c.Server, c.Port), timeout)
 	if err != nil {
 
 		return err
 	}
 
 	for {
+		_ = conn.SetReadDeadline(time.Now().Add(timeout))
+		_ = conn.SetWriteDeadline(time.Now().Add(timeout))
 		_, err = conn.Read(recvData)
 		if err != nil {
 
