@@ -17,6 +17,7 @@ const DefaultUsername = "s01"
 const DefaultPassword = "USER_DEFAULT_PASSWORD"
 const DefaultProtocol = "ip4"
 const PingPacketHistoryLen = 100
+const TimeOut = time.Second * 5
 
 const ProbePort = 80
 const PingCu = "cu.tz.cloudcpp.com"
@@ -49,8 +50,6 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	log.Println("服务器授权成功")
-
 	go c.startPing()
 	go c.startRun()
 
@@ -68,11 +67,18 @@ func (c *Client) startRun() {
 		if jsonByte, err := json.Marshal(update); err != nil {
 			log.Println(err.Error())
 		} else {
+			_ = c.conn.SetWriteDeadline(time.Now().Add(TimeOut))
 			data = append(data, jsonByte...)
 			data = append(data, []byte("\n")...)
 			write, err := c.conn.Write(data)
 			if err != nil {
-				log.Printf("发送失败：%s\n", err.Error())
+				_ = c.conn.Close()
+				log.Printf("[准备重连]发送失败：%s\n", err.Error())
+
+				if err = c.connectServer(); err != nil {
+
+					log.Printf("服务器重连失败：%s\n", err.Error())
+				}
 			} else {
 				log.Printf("发送成功：%dByte\n", write)
 			}
@@ -81,16 +87,15 @@ func (c *Client) startRun() {
 }
 func (c *Client) connectServer() error {
 	var recvData = make([]byte, 128)
-	var timeout = time.Second * 5
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%v", c.Server, c.Port), timeout)
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%v", c.Server, c.Port), TimeOut)
 	if err != nil {
 
 		return err
 	}
 
 	for {
-		_ = conn.SetReadDeadline(time.Now().Add(timeout))
-		_ = conn.SetWriteDeadline(time.Now().Add(timeout))
+		_ = conn.SetReadDeadline(time.Now().Add(TimeOut))
+		_ = conn.SetWriteDeadline(time.Now().Add(TimeOut))
 		_, err = conn.Read(recvData)
 		if err != nil {
 
@@ -119,6 +124,8 @@ func (c *Client) connectServer() error {
 	}
 
 	c.conn = conn
+
+	log.Println("服务器连接成功")
 
 	return nil
 }
