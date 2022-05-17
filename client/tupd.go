@@ -10,30 +10,37 @@ import (
 	"strings"
 )
 
-func (c *Client) getTupd() tupdStat {
+func (c *Client) getTupd(ret *update) {
 	info, err := host.Info()
 	if err != nil {
-		log.Println(err.Error())
+		if c.Debug {
 
-		return tupdStat{}
+			log.Println(err.Error())
+		}
+
+		c.waitGroup.Done()
+		return
 	}
+
+	var r tupdStat
 
 	if info.Platform == "openwrt" {
 
-		return getOpenWrtTupd()
+		r = getOpenWrtTupd()
+	} else if strings.HasPrefix(runtime.GOOS, "linux") {
+
+		r = getLinuxTupd()
+	} else {
+		// windows
+
+		r = getWinTupd()
 	}
 
-	if strings.HasPrefix(runtime.GOOS, "linux") {
-
-		return getLinuxTupd()
-	}
-
-	if strings.HasPrefix(runtime.GOOS, "win") {
-
-		return getWinTupd()
-	}
-
-	return tupdStat{}
+	ret.Tcp = r.tcp
+	ret.Udp = r.udp
+	ret.Process = r.process
+	ret.Thread = r.thread
+	c.waitGroup.Done()
 }
 
 func getOpenWrtTupd() tupdStat {
@@ -80,6 +87,7 @@ func getOpenWrtTupd() tupdStat {
 		thread:  uint(thread),
 	}
 }
+
 func getLinuxTupd() tupdStat {
 	var tcp, udp, process, thread uint64
 
@@ -119,10 +127,12 @@ func getLinuxTupd() tupdStat {
 		thread:  uint(thread - 1),
 	}
 }
+
 func getWinTupd() tupdStat {
 
 	return tupdStat{}
 }
+
 func isNumber(str string) bool {
 	_, err := strconv.ParseFloat(str, 64)
 	if err != nil {

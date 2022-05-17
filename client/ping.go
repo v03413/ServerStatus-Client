@@ -28,7 +28,6 @@ func (c *Client) getPingTime(host string) uint {
 
 	return 0
 }
-
 func (c *Client) startPing() {
 	for range time.Tick(time.Second * time.Duration(c.Interval)) {
 		for host, domain := range pingHost {
@@ -61,8 +60,7 @@ func (c *Client) startPing() {
 		}
 	}
 }
-
-func (c Client) getLostPacket(host string) float64 {
+func (c *Client) getLostPacket(host string) float64 {
 	var succ, total uint64
 	for _, v := range lostPacket[host] {
 		total += 1

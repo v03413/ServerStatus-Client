@@ -2,32 +2,48 @@ package client
 
 import (
 	"github.com/shirou/gopsutil/net"
-	"sync"
+	"log"
 	"time"
 )
 
 var lastRecvBytes uint64
 var lastSendBytes uint64
-var netLock sync.Mutex
+var lastNetUpdateTime uint64
+var currentRx, currentTx uint64
 
-func (c *Client) GetNetRate() rateStat {
-	var recvTotal, sentTotal uint64
-	info, _ := net.IOCounters(true)
-	for _, v := range info {
-		recvTotal += v.BytesRecv
-		sentTotal += v.BytesSent
+func (c *Client) GetNetRate(retInfo *update) {
+	retInfo.NetWorkRx = currentRx
+	retInfo.NetWorkTx = currentTx
+
+	c.waitGroup.Done()
+}
+
+func (c *Client) startNet() {
+	for range time.Tick(time.Second * time.Duration(c.Interval)) {
+		var recvTotal, sentTotal uint64
+		info, err := net.IOCounters(true)
+		if err != nil {
+			if c.Debug {
+
+				log.Println(err.Error())
+			}
+
+			continue
+		}
+
+		for _, v := range info {
+			recvTotal += v.BytesRecv
+			sentTotal += v.BytesSent
+		}
+
+		if lastNetUpdateTime > 1 {
+			second := uint64(time.Now().Unix()) - lastNetUpdateTime
+			currentRx = (recvTotal - lastRecvBytes) / second
+			currentTx = (sentTotal - lastSendBytes) / second
+		}
+
+		lastRecvBytes = recvTotal
+		lastSendBytes = sentTotal
+		lastNetUpdateTime = uint64(time.Now().Unix())
 	}
-
-	var ret = rateStat{
-		recvBytes: recvTotal - lastRecvBytes,
-		sendBytes: sentTotal - lastSendBytes,
-		second:    uint64(time.Now().Sub(c.lastUpdateTime).Seconds()),
-	}
-
-	netLock.Lock()
-	lastRecvBytes = recvTotal
-	lastSendBytes = sentTotal
-	netLock.Unlock()
-
-	return ret
 }

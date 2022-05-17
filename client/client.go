@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -25,14 +26,16 @@ const PingCt = "ct.tz.cloudcpp.com"
 const PingCm = "cm.tz.cloudcpp.com"
 
 type Client struct {
-	Server   string
-	Port     uint64
-	Username string
-	Password string
-	Interval uint64
-	Protocol string
-	conn     net.Conn
-	baseInfo struct {
+	Server    string
+	Port      uint64
+	Username  string
+	Password  string
+	Interval  uint64
+	Protocol  string
+	Debug     bool
+	waitGroup sync.WaitGroup
+	conn      net.Conn
+	baseInfo  struct {
 		checkIp uint8
 		timer   uint8
 	}
@@ -51,6 +54,8 @@ func (c *Client) Start() error {
 	}
 
 	go c.startPing()
+	go c.startNet()
+	go c.startDiskIo()
 	go c.startRun()
 
 	return nil
@@ -62,7 +67,11 @@ func (c *Client) startRun() {
 	}(c.conn)
 
 	for range time.Tick(time.Second * time.Duration(c.Interval)) {
+		var start = time.Now()
 		var update = c.getUpdateInfo()
+		if c.Debug {
+			log.Printf("获取耗时：%v", time.Now().Sub(start))
+		}
 		var data = []byte("update ")
 		if jsonByte, err := json.Marshal(update); err != nil {
 			log.Println(err.Error())
@@ -150,7 +159,7 @@ func (c *Client) initiation() error {
 
 		c.Port = DefaultPort
 	}
-	if c.Interval == 0 {
+	if c.Interval <= 0 {
 
 		c.Interval = DefaultInterval
 	}
@@ -160,43 +169,29 @@ func (c *Client) initiation() error {
 	return nil
 }
 func (c *Client) getUpdateInfo() update {
-	var ret update
+	c.waitGroup = sync.WaitGroup{}
+	var ret = &update{}
 
-	ret.Uptime = c.getUpTime()
-	ret.Cpu = c.getCpuPercent()
+	c.waitGroup.Add(1)
+	go c.getUpTime(ret)
 
-	loadavg, err := load.Avg()
-	if err != nil {
-		loadavg.Load1 = 0
-		loadavg.Load5 = 0
-		loadavg.Load15 = 0
-	}
+	c.waitGroup.Add(1)
+	go c.getCpuPercent(ret)
 
-	ret.Load1 = loadavg.Load1
-	ret.Load5 = loadavg.Load5
-	ret.Load15 = loadavg.Load15
+	c.waitGroup.Add(1)
+	go c.getMemory(ret)
 
-	var memory = c.getMemory()
-	ret.MemoryTotal = memory.total
-	ret.MemoryUsed = memory.used
+	c.waitGroup.Add(1)
+	go c.getSwap(ret)
 
-	var swap = c.getSwap()
-	ret.SwapTotal = swap.total
-	ret.SwapUsed = swap.used
+	c.waitGroup.Add(1)
+	go c.getDiskUsage(ret)
 
-	var hdd = c.getDiskUsage()
-	ret.HddTotal = hdd.size
-	ret.HddUsed = hdd.used
+	c.waitGroup.Add(1)
+	go c.getTraffic(ret)
 
-	var trafficData = c.getTraffic()
-	ret.NetWorkIn = trafficData.in
-	ret.NetWorkOut = trafficData.out
-
-	ret.IpStatus = true
-
-	var rateData = c.GetNetRate()
-	ret.NetWorkRx = rateData.recvBytes / rateData.second
-	ret.NetWorkTx = rateData.sendBytes / rateData.second
+	c.waitGroup.Add(1)
+	go c.GetNetRate(ret)
 
 	ret.Ping10086 = c.getLostPacket("10086")
 	ret.Ping10010 = c.getLostPacket("10010")
@@ -206,17 +201,20 @@ func (c *Client) getUpdateInfo() update {
 	ret.Time10010 = c.getPingTime("10010")
 	ret.Time189 = c.getPingTime("189")
 
-	var ioData = c.getDiskIo()
-	ret.IoRead = ioData.readBytes / ioData.second
-	ret.IoWrite = ioData.writeBytes / ioData.second
+	c.waitGroup.Add(1)
+	go c.getDiskIo(ret)
 
-	var tupd = c.getTupd()
-	ret.Tcp = tupd.tcp
-	ret.Udp = tupd.udp
-	ret.Process = tupd.process
-	ret.Thread = tupd.thread
+	c.waitGroup.Add(1)
+	go c.getTupd(ret)
 
-	c.lastUpdateTime = time.Now()
+	if loadavg, err := load.Avg(); err == nil {
+		ret.Load1 = loadavg.Load1
+		ret.Load5 = loadavg.Load5
+		ret.Load15 = loadavg.Load15
+	}
 
-	return ret
+	ret.IpStatus = true
+	c.waitGroup.Wait()
+
+	return *ret
 }

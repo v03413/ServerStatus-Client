@@ -31,6 +31,10 @@ func main() {
 
 			client.Password = strings.TrimSpace(strings.Split(v, "PASSWORD=")[1])
 		}
+		if strings.HasPrefix(v, "DEBUG=") {
+
+			client.Debug = strings.TrimSpace(strings.Split(v, "DEBUG=")[1]) != ""
+		}
 	}
 
 	err := client.Start()

@@ -2,52 +2,38 @@ package client
 
 import (
 	"github.com/shirou/gopsutil/disk"
-	"sync"
+	"log"
 	"time"
 )
 
 var validFs = []string{"ext4", "ext3", "ext2", "reiserfs", "overlay", "jfs", "btrfs", "fuseblk", "zfs", "simfs", "ntfs", "fat32", "exfat", "xfs", "apfs", "hfs"}
 var lastReadBytes uint64
 var lastWriteBytes uint64
-var ioLock sync.Mutex
+var lastDiskUpdateTime uint64
+var curReadIo, curWriteIo uint64
 
-func (c *Client) getDiskIo() ioStat {
-	var read, write uint64
+func (c *Client) getDiskIo(retInfo *update) {
 
-	stats, err := disk.IOCounters()
-	if err != nil {
+	retInfo.IoRead = curReadIo
+	retInfo.IoWrite = curWriteIo
 
-		return ioStat{}
-	}
-
-	for _, stat := range stats {
-		read += stat.ReadBytes
-		write += stat.WriteBytes
-	}
-
-	var ret = ioStat{
-		writeBytes: write - lastWriteBytes,
-		readBytes:  read - lastReadBytes,
-		second:     uint64(time.Now().Sub(c.lastUpdateTime).Seconds()),
-	}
-
-	ioLock.Lock()
-	lastReadBytes = read
-	lastWriteBytes = write
-	ioLock.Unlock()
-
-	return ret
+	c.waitGroup.Done()
 }
 
-func (c *Client) getDiskUsage() diskStat {
+func (c *Client) getDiskUsage(ret *update) {
 	var disks []string
 	var size uint64
 	var used uint64
 
 	list, err := disk.Partitions(true)
 	if err != nil {
+		if c.Debug {
 
-		return diskStat{}
+			log.Println(err.Error())
+		}
+
+		c.waitGroup.Done()
+		return
 	}
 
 	for _, itm := range list {
@@ -66,8 +52,39 @@ func (c *Client) getDiskUsage() diskStat {
 		}
 	}
 
-	return diskStat{
-		size: size / 1024 / 1024,
-		used: used / 1024 / 1024,
+	ret.HddTotal = size / 1024 / 1024
+	ret.HddUsed = used / 1024 / 1024
+	c.waitGroup.Done()
+}
+
+func (c *Client) startDiskIo() {
+	for range time.Tick(time.Second * time.Duration(c.Interval)) {
+		var read, write uint64
+
+		stats, err := disk.IOCounters()
+		if err != nil {
+			if c.Debug {
+
+				log.Println(err.Error())
+			}
+
+			continue
+		}
+
+		for _, stat := range stats {
+			read += stat.ReadBytes
+			write += stat.WriteBytes
+		}
+
+		if lastDiskUpdateTime > 1 {
+			second := uint64(time.Now().Unix()) - lastDiskUpdateTime
+			curReadIo = (read - lastReadBytes) / second
+			curWriteIo = (write - lastWriteBytes) / second
+		}
+
+		lastReadBytes = read
+		lastWriteBytes = write
+		lastDiskUpdateTime = uint64(time.Now().Unix())
+		log.Println(curReadIo, curWriteIo)
 	}
 }

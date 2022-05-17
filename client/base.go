@@ -10,54 +10,73 @@ import (
 	"time"
 )
 
-func (c *Client) getUpTime() uint64 {
+func (c *Client) getUpTime(ret *update) {
 	uptime, err := host.Uptime()
 	if err != nil {
-		log.Println(err.Error())
+		if c.Debug {
 
-		return 0
+			log.Println(err.Error())
+		}
+
+		c.waitGroup.Done()
+		return
 	}
 
-	return uptime
+	ret.Uptime = uptime
+	c.waitGroup.Done()
 }
-func (c *Client) getMemory() memory {
+func (c *Client) getMemory(ret *update) {
 	virtual, err := mem.VirtualMemory()
 	if err != nil {
+		if c.Debug {
 
-		return memory{}
+			log.Println(err.Error())
+		}
+
+		c.waitGroup.Done()
+		return
 	}
 
-	return memory{
-		total: virtual.Total / 1024,
-		used:  virtual.Used / 1024,
-	}
+	ret.MemoryTotal = virtual.Total / 1024
+	ret.MemoryUsed = virtual.Used / 1024
+	c.waitGroup.Done()
 }
-func (c *Client) getSwap() swap {
+func (c *Client) getSwap(ret *update) {
 	swapMemory, err := mem.SwapMemory()
 	if err != nil {
+		if c.Debug {
 
-		return swap{}
+			log.Println(err.Error())
+		}
+
+		c.waitGroup.Done()
+		return
 	}
 
-	return swap{
-		total: swapMemory.Total / 1024,
-		used:  swapMemory.Used / 1024,
-	}
+	ret.SwapTotal = swapMemory.Total / 1024
+	ret.SwapUsed = swapMemory.Used / 1024
+	c.waitGroup.Done()
 }
-func (c *Client) getCpuPercent() float64 {
+func (c *Client) getCpuPercent(ret *update) {
 	percent, _ := cpu.Percent(time.Second*time.Duration(c.Interval), false)
 
-	return percent[0]
+	ret.Cpu = percent[0]
+	c.waitGroup.Done()
 }
-func (c *Client) getTraffic() traffic {
+func (c *Client) getTraffic(ret *update) {
 	var data = traffic{
 		in:  0,
 		out: 0,
 	}
 	items, err := psnet.IOCounters(true)
 	if err != nil {
+		if c.Debug {
 
-		return data
+			log.Println(err.Error())
+		}
+
+		c.waitGroup.Done()
+		return
 	}
 
 	var inters = []string{
@@ -82,5 +101,7 @@ func (c *Client) getTraffic() traffic {
 		}
 	}
 
-	return data
+	ret.NetWorkIn = data.in
+	ret.NetWorkOut = data.out
+	c.waitGroup.Done()
 }
