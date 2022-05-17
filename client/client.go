@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/shirou/gopsutil/load"
 	"log"
@@ -46,11 +47,11 @@ type Client struct {
 func (c *Client) Start() error {
 	if err := c.initiation(); err != nil {
 
-		return err
+		return errors.New(fmt.Sprintf("初始化错误：%s", err.Error()))
 	}
 	if err := c.connectServer(); err != nil {
 
-		return err
+		return errors.New(err.Error())
 	}
 
 	go c.startPing()
@@ -99,7 +100,7 @@ func (c *Client) connectServer() error {
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%v", c.Server, c.Port), TimeOut)
 	if err != nil {
 
-		return err
+		return errors.New(fmt.Sprintf("[连接]建立失败：%s", err.Error()))
 	}
 
 	for {
@@ -108,14 +109,14 @@ func (c *Client) connectServer() error {
 		_, err = conn.Read(recvData)
 		if err != nil {
 
-			return err
+			return errors.New(fmt.Sprintf("[连接]数据读取失败：%s", err.Error()))
 		}
 
 		if strings.Contains(string(recvData), "Authentication required") {
 			_, err := conn.Write([]byte(fmt.Sprintf("%s:%s\n", c.Username, c.Password)))
 			if err != nil {
 
-				return err
+				return errors.New(fmt.Sprintf("[连接]数据发送失败：%s", err.Error()))
 			}
 
 			continue
