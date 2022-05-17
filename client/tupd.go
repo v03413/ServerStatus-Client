@@ -1,38 +1,20 @@
 package client
 
 import (
-	"github.com/shirou/gopsutil/host"
 	"io/ioutil"
-	"log"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
 )
 
 func (c *Client) getTupd(ret *update) {
-	info, err := host.Info()
-	if err != nil {
-		if c.Debug {
-
-			log.Println(err.Error())
-		}
-
-		c.waitGroup.Done()
-		return
-	}
-
 	var r tupdStat
 
-	if info.Platform == "openwrt" {
+	if runtime.GOOS == "linux" {
 
 		r = getOpenWrtTupd()
-	} else if strings.HasPrefix(runtime.GOOS, "linux") {
-
-		r = getLinuxTupd()
 	} else {
 		// windows
-
 		r = getWinTupd()
 	}
 
@@ -46,19 +28,55 @@ func (c *Client) getTupd(ret *update) {
 func getOpenWrtTupd() tupdStat {
 	var tcp, udp, process, thread uint64
 
-	cmd := exec.Command("bash", "-c", "netstat -t | wc -l")
-	if out, err := cmd.CombinedOutput(); err != nil {
+	var validTcpSt = make(map[string]bool)
+	validTcpSt["01"] = true
+	validTcpSt["02"] = true
+	validTcpSt["03"] = true
+	validTcpSt["04"] = true
+	validTcpSt["05"] = true
+	validTcpSt["06"] = true
+	validTcpSt["07"] = true
+	validTcpSt["08"] = true
+	//TCP_ESTABLISHED = 01
+	//TCP_SYN_SENT    = 02
+	//TCP_SYN_RECV    = 03
+	//TCP_FIN_WAIT1   = 04
+	//TCP_FIN_WAIT2   = 05
+	//TCP_TIME_WAIT   = 06
+	//TCP_CLOSE       = 07
+	//TCP_CLOSE_WAIT  = 08
+	//TCP_LAST_ACL = 09
+	//TCP_LISTEN = 0A
+	//TCP_CLOSING = 0B
 
-		log.Println(err.Error())
-	} else {
-		tcp, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
+	for _, file := range []string{"/proc/net/tcp", "/proc/net/tcp6"} {
+		if text, err := ioutil.ReadFile(file); err == nil {
+			lines := strings.Split(string(text), "\n")
+			for _, line := range lines[1:] {
+				fields := strings.Fields(line)
+				if len(fields) > 4 {
+					st := strings.TrimSpace(fields[3])
+					if _, ok := validTcpSt[st]; ok {
+						tcp += 1
+					}
+				}
+			}
+		}
 	}
 
-	cmd = exec.Command("bash", "-c", "netstat -u | wc -l")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		log.Println(err.Error())
-	} else {
-		udp, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
+	for _, file := range []string{"/proc/net/udp", "/proc/net/udp6"} {
+		if text, err := ioutil.ReadFile(file); err == nil {
+			lines := strings.Split(string(text), "\n")
+			for _, line := range lines[1:] {
+				fields := strings.Fields(line)
+				if len(fields) > 4 {
+					st := strings.TrimSpace(fields[3])
+					if st != "07" { // udp socket 状态
+						udp += 1
+					}
+				}
+			}
+		}
 	}
 
 	if hd, err := ioutil.ReadDir("/proc"); err == nil {
@@ -81,50 +99,10 @@ func getOpenWrtTupd() tupdStat {
 	}
 
 	return tupdStat{
-		tcp:     uint(tcp - 2),
-		udp:     uint(udp - 2),
+		tcp:     uint(tcp),
+		udp:     uint(udp),
 		process: uint(process),
 		thread:  uint(thread),
-	}
-}
-
-func getLinuxTupd() tupdStat {
-	var tcp, udp, process, thread uint64
-
-	cmd := exec.Command("bash", "-c", "ss -t | wc -l")
-	if out, err := cmd.CombinedOutput(); err != nil {
-
-		log.Println(err.Error())
-	} else {
-		tcp, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
-	}
-
-	cmd = exec.Command("bash", "-c", "ss -u | wc -l")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		log.Println(err.Error())
-	} else {
-		udp, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
-	}
-
-	cmd = exec.Command("bash", "-c", "ps -ef | wc -l")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		log.Println(err.Error())
-	} else {
-		process, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
-	}
-
-	cmd = exec.Command("bash", "-c", "ps -eLf | wc -l")
-	if out, err := cmd.CombinedOutput(); err != nil {
-		log.Println(err.Error())
-	} else {
-		thread, _ = strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
-	}
-
-	return tupdStat{
-		tcp:     uint(tcp - 1),
-		udp:     uint(udp - 1),
-		process: uint(process - 1),
-		thread:  uint(thread - 1),
 	}
 }
 

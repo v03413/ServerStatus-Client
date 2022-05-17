@@ -85,6 +85,5 @@ func (c *Client) startDiskIo() {
 		lastReadBytes = read
 		lastWriteBytes = write
 		lastDiskUpdateTime = uint64(time.Now().Unix())
-		log.Println(curReadIo, curWriteIo)
 	}
 }
