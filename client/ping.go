@@ -4,20 +4,21 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
 
 var lostPacket = make(map[string][]bool)
-var pingHost = make(map[string]string)
+var pingHost = sync.Map{}
 
 func init() {
 	lostPacket["10010"] = []bool{}
 	lostPacket["10086"] = []bool{}
 	lostPacket["189"] = []bool{}
 
-	pingHost["10010"] = PingCu
-	pingHost["10086"] = PingCm
-	pingHost["189"] = PingCt
+	pingHost.Store("10010", PingCu)
+	pingHost.Store("10086", PingCm)
+	pingHost.Store("189", PingCt)
 }
 
 func (c *Client) getPingTime(host string) uint {
@@ -28,10 +29,13 @@ func (c *Client) getPingTime(host string) uint {
 
 	return 0
 }
+
 func (c *Client) startPing() {
 	for range time.Tick(time.Second * time.Duration(c.Interval)) {
-		for host, domain := range pingHost {
+		pingHost.Range(func(k, v interface{}) bool {
 			var ip *net.IPAddr
+			host := k.(string)
+			domain := v.(string)
 
 			if c.Protocol == DefaultProtocol {
 				ip, _ = net.ResolveIPAddr(DefaultProtocol, domain)
@@ -52,14 +56,16 @@ func (c *Client) startPing() {
 
 				lostPacket[host] = append(lostPacket[host], false)
 				c.pingTime[host] = uint(time.Now().Sub(start).Milliseconds())
-				continue
+			} else {
+				lostPacket[host] = append(lostPacket[host], true)
+				log.Println(err.Error())
 			}
 
-			lostPacket[host] = append(lostPacket[host], true)
-			log.Println(err.Error())
-		}
+			return true
+		})
 	}
 }
+
 func (c *Client) getLostPacket(host string) float64 {
 	var succ, total uint64
 	for _, v := range lostPacket[host] {
