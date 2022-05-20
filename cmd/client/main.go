@@ -37,6 +37,8 @@ func main() {
 		}
 	}
 
+	log.Printf("开始运行，当前版本：%v", client2.Version)
+
 	err := client.Start()
 	if err != nil {
 
