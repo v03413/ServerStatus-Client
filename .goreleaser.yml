@@ -9,4 +9,4 @@ builds:
       - arm64
     id: "ServerStatus-Client"
     dir: .
-    main: ./cmd/clinet
+    main: ./cmd/client
