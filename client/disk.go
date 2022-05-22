@@ -76,8 +76,8 @@ func (c *Client) startDiskIo() {
 			write += stat.WriteBytes
 		}
 
-		if lastDiskUpdateTime > 1 {
-			second := uint64(time.Now().Unix()) - lastDiskUpdateTime
+		second := uint64(time.Now().Unix()) - lastDiskUpdateTime
+		if second > 0 {
 			curReadIo = (read - lastReadBytes) / second
 			curWriteIo = (write - lastWriteBytes) / second
 		}
