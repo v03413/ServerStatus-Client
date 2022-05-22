@@ -13,6 +13,7 @@ import (
 
 func main() {
 	var client = client2.Client{}
+	var osSignals = make(chan os.Signal, 1)
 
 	for _, v := range os.Args {
 		if strings.HasPrefix(v, "SERVER=") {
@@ -23,9 +24,9 @@ func main() {
 
 			client.Port, _ = strconv.ParseUint(strings.TrimSpace(strings.Split(v, "PORT=")[1]), 10, 64)
 		}
-		if strings.HasPrefix(v, "USERNAME=") {
+		if strings.HasPrefix(v, "USER=") {
 
-			client.Username = strings.TrimSpace(strings.Split(v, "USERNAME=")[1])
+			client.Username = strings.TrimSpace(strings.Split(v, "USER=")[1])
 		}
 		if strings.HasPrefix(v, "PASSWORD=") {
 
@@ -43,12 +44,12 @@ func main() {
 	if err != nil {
 
 		log.Println(err.Error())
+		signal.Notify(osSignals, os.Interrupt)
 		return
 	}
 
 	runtime.GC()
 	{
-		osSignals := make(chan os.Signal, 1)
 		signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
 		<-osSignals
 	}
