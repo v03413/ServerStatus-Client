@@ -110,7 +110,7 @@ func (c *Client) connectServer() error {
 		_, err = conn.Read(recvData)
 		if err != nil {
 
-			return errors.New(fmt.Sprintf("[连接]数据读取失败：%s", err.Error()))
+			return errors.New(fmt.Sprintf("[连接]数据响应错误：%s，%s", err.Error(), string(recvData)))
 		}
 
 		if strings.Contains(string(recvData), "Authentication required") {
