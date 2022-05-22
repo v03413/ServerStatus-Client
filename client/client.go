@@ -37,12 +37,12 @@ type Client struct {
 	Debug     bool
 	waitGroup sync.WaitGroup
 	conn      net.Conn
+	lastTime  time.Time
+	pingTime  sync.Map
 	baseInfo  struct {
 		checkIp uint8
 		timer   uint8
 	}
-	lastUpdateTime time.Time
-	pingTime       map[string]uint
 }
 
 func (c *Client) Start() error {
@@ -166,7 +166,7 @@ func (c *Client) initiation() error {
 		c.Interval = DefaultInterval
 	}
 
-	c.pingTime = make(map[string]uint)
+	c.pingTime = sync.Map{}
 
 	return nil
 }

@@ -19,9 +19,9 @@ func init() {
 }
 
 func (c *Client) getPingTime(host string) uint {
-	if v, ok := c.pingTime[host]; ok {
+	if v, ok := c.pingTime.Load(host); ok {
 
-		return v
+		return v.(uint)
 	}
 
 	return 0
@@ -56,7 +56,7 @@ func (c *Client) startPing() {
 				_ = dial.Close()
 
 				lost.Push(false)
-				c.pingTime[host] = uint(time.Now().Sub(start).Milliseconds())
+				c.pingTime.Store(host, uint(time.Now().Sub(start).Milliseconds()))
 			} else {
 				lost.Push(true)
 			}
