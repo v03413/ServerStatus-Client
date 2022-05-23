@@ -36,8 +36,8 @@ func (c *Client) startNet() {
 			sentTotal += v.BytesSent
 		}
 
-		if lastNetUpdateTime > 1 {
-			second := uint64(time.Now().Unix()) - lastNetUpdateTime
+		second := uint64(time.Now().Unix()) - lastNetUpdateTime
+		if second > 0 {
 			currentRx = (recvTotal - lastRecvBytes) / second
 			currentTx = (sentTotal - lastSendBytes) / second
 		}
