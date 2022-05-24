@@ -81,6 +81,7 @@ func (c *Client) getTraffic(ret *update) {
 
 	var inters = []string{
 		"lo",
+		"eth",
 		"tun",
 		"docker",
 		"veth",
