@@ -81,7 +81,6 @@ func (c *Client) getTraffic(ret *update) {
 
 	var inters = []string{
 		"lo",
-		"eth",
 		"tun",
 		"docker",
 		"veth",
@@ -89,17 +88,28 @@ func (c *Client) getTraffic(ret *update) {
 		"vmbr",
 		"vnet",
 		"kube",
+		"ip_",
+	}
+
+	var contains = func(s string, subStr []string) bool {
+		for _, v := range subStr {
+			if strings.Contains(s, v) {
+
+				return true
+			}
+		}
+
+		return false
 	}
 
 	for _, info := range items {
-		for _, v := range inters {
-			if !strings.Contains(info.Name, v) {
-				continue
-			}
+		if contains(info.Name, inters) {
 
-			data.in += info.BytesRecv
-			data.out += info.BytesSent
+			continue
 		}
+
+		data.in += info.BytesRecv
+		data.out += info.BytesSent
 	}
 
 	ret.NetWorkIn = data.in
