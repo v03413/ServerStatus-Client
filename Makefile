@@ -9,7 +9,7 @@ PKG_SOURCE_URL:=https://codeload.github.com/v03413/ServerStatus-Client/tar.gz/v$
 PKG_HASH:=22ac41cdee2333dff9dcf82ab39b2cd118dfeb8b353342076257b48365259484
 
 PKG_LICENSE:=GPLV3
-PKG_LICENSE_FILES:=LICENSE
+PKG_LICENSE_openwrt:=LICENSE
 PKG_MAINTAINER:=V03413 <admin@qzone.work>
 
 PKG_BUILD_DEPENDS:=golang/host
@@ -36,8 +36,20 @@ endef
 define Package/ServerStatus-Client/install
 	$(call GoPackage/Package/Install/Bin,$(PKG_INSTALL_DIR))
 
+	# 安装执行文件
 	$(INSTALL_DIR) $(1)/usr/bin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/client $(1)/usr/bin/client
+
+	# 安装后台插件
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/model/cbi
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/controller
+
+	$(INSTALL_CONF) ./openwrt/root/etc/config/client $(1)/etc/config/client
+	$(INSTALL_BIN) ./openwrt/root/etc/init.d/client $(1)/etc/init.d/client
+	$(INSTALL_DATA) ./openwrt/luci/model/cbi/client.lua $(1)/usr/lib/lua/luci/model/cbi/client.lua
+	$(INSTALL_DATA) ./openwrt/luci/controller/client.lua $(1)/usr/lib/lua/luci/controller/client.lua
 endef
 
 $(eval $(call BuildPackage,ServerStatus-Client))
