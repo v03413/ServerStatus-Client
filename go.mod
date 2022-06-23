@@ -1,4 +1,4 @@
-module ServerStatus-Client
+module github.com/v03413/ServerStatus-Client
 
 go 1.18
 
