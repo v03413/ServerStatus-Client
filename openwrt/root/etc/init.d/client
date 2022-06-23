@@ -1,0 +1,47 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+STOP=99
+NAME=client
+BIN=/usr/bin/client
+USE_PROCD=1
+
+get_config() {
+    config_get_bool enable $1 enable 0
+    config_get server $1 server "127.0.0.1"
+    config_get port $1 port 35601
+    config_get user $1 user "s01"
+    config_get password $1 password "123456"
+}
+
+start_service() {
+    config_load $NAME
+    config_foreach get_config server
+    [ $enable != 1 ] && return 1
+
+    echo "SERVICE $NAME START"
+
+    ARGS="SERVER=$server PORT=$port PASSWORD=$password USER=$user"
+
+    procd_open_instance
+    procd_set_param command $BIN $ARGS
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    procd_set_param file /etc/config/client
+    procd_set_param pidfile /var/run/client.pid
+    procd_set_param respawn
+    procd_set_param user root
+    procd_close_instance
+}
+
+stop_service() {
+    echo "SERVICE $NAME STOP"
+    rm -f /var/run/${NAME}.pid
+    killall $NAME
+}
+
+reload_service() {
+    echo "SERVICE $NAME RELOAD"
+    stop
+    start
+}
