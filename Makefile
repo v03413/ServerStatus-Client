@@ -3,10 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=ServerStatus-Client
 PKG_VERSION:=0.15
 PKG_RELEASE:=$(AUTORELEASE)
-
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://codeload.github.com/v03413/ServerStatus-Client/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=22ac41cdee2333dff9dcf82ab39b2cd118dfeb8b353342076257b48365259484
+PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 
 PKG_LICENSE:=GPLV3
 PKG_LICENSE_openwrt:=LICENSE
@@ -24,6 +21,10 @@ GO_PKG_LDFLAGS_X:= \
 
 include $(INCLUDE_DIR)/package.mk
 include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
+
+define Build/Prepare
+	$(CP) ./* $(PKG_BUILD_DIR)/
+endef
 
 define Package/ServerStatus-Client
 	TITLE:=ServerStatus Client
