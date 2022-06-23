@@ -1,7 +1,7 @@
 package main
 
 import (
-	client2 "ServerStatus-Client/client"
+	ssClient "github.com/v03413/ServerStatus-Client/client"
 	"log"
 	"os"
 	"os/signal"
@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	var client = client2.Client{}
+	var client = ssClient.Client{}
 	var osSignals = make(chan os.Signal, 1)
 
 	for _, v := range os.Args {
@@ -38,7 +38,7 @@ func main() {
 		}
 	}
 
-	log.Printf("开始运行，当前版本：%v", client2.Version)
+	log.Printf("开始运行，当前版本：%v", ssClient.Version)
 
 	err := client.Start()
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const Version = 0.14
+const Version = 0.15
 const DefaultServer = "127.0.0.1"
 const DefaultPort = 35601
 const DefaultInterval = 1
