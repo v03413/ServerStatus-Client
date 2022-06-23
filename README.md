@@ -1,9 +1,8 @@
 # Golang 版本的探针客户端
 
-云探针 https://github.com/cppla/ServerStatus ，Golang版客户端；同时增加了对`OpenWRT`的适配。  
-**也就是说利用此项目，您可以给自己的路由器挂个探针～**  
+云探针 https://github.com/cppla/ServerStatus ，Golang版客户端；同时增加了对`OpenWRT`的适配、**也就是说利用此项目，您可以给自己的路由器挂个探针。**  
 
-## 开发原因
+## 开发原因  
 
 - 学习Golang，自我提升
 - 疫情原因，闲置在家
@@ -11,7 +10,7 @@
 
 ## 使用教程
 
-普通的X86机器，使用方法同原版Python脚本一样，只是由脚本换成了本项目的可执行文件，具体方法不再阐述。  
+普通服务器，使用方法同原版Python脚本一样，只是由脚本换成了本项目的可执行文件，具体方法不再阐述。  
 
 ---  
 
@@ -29,7 +28,7 @@
 cd lede/package/  
 
 # 拉取编译文件
-git clone https://github.com/jerrykuku/luci-app-vssr.git 
+git clone https://github.com/v03413/ServerStatus-Client.git
 
 # 返回编译根目录
 cd ../
