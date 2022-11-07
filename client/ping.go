@@ -51,7 +51,7 @@ func (c *Client) startPing() {
 			}
 
 			var start = time.Now()
-			dial, err := net.Dial("tcp", fmt.Sprintf("%s:%d", ip, ProbePort))
+			dial, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, ProbePort), time.Second*3)
 			if err == nil {
 				_ = dial.Close()
 
