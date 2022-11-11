@@ -12,15 +12,15 @@ import (
 	"time"
 )
 
-const Version = 0.15
+const Version = 0.16
 const DefaultServer = "127.0.0.1"
-const DefaultPort = 35601
-const DefaultInterval = 1
+const DefaultPort = "35601"
+const DefaultInterval = 3
 const DefaultUsername = "s01"
 const DefaultPassword = "USER_DEFAULT_PASSWORD"
 const DefaultProtocol = "ip4"
 const PingPacketHistoryLen = 100
-const TimeOut = time.Second * 5
+const TimeOut = time.Second * 3
 
 const ProbePort = 80
 const PingCu = "cu.tz.cloudcpp.com"
@@ -29,7 +29,7 @@ const PingCm = "cm.tz.cloudcpp.com"
 
 type Client struct {
 	Server    string
-	Port      uint64
+	Port      string
 	Username  string
 	Password  string
 	Interval  uint64
@@ -45,28 +45,24 @@ type Client struct {
 	}
 }
 
-func (c *Client) Start() error {
-	if err := c.initiation(); err != nil {
-
-		return errors.New(fmt.Sprintf("初始化错误：%s", err.Error()))
-	}
-	if err := c.connectServer(); err != nil {
-
-		return errors.New(err.Error())
-	}
-
+func (c *Client) Start() {
 	go c.startPing()
 	go c.startNet()
 	go c.startDiskIo()
 	go c.startRun()
-
-	return nil
 }
 func (c *Client) startRun() {
-	defer func(conn net.Conn) {
-		_ = conn.Close()
+	if c.conn == nil {
+		err := c.connectServer()
+		if err != nil {
+			log.Println(err.Error())
+		} else {
+			defer func(conn net.Conn) {
+				_ = conn.Close()
 
-	}(c.conn)
+			}(c.conn)
+		}
+	}
 
 	for range time.Tick(time.Second * time.Duration(c.Interval)) {
 		var start = time.Now()
@@ -98,7 +94,9 @@ func (c *Client) startRun() {
 }
 func (c *Client) connectServer() error {
 	var recvData = make([]byte, 128)
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%v", c.Server, c.Port), TimeOut)
+	var addr = fmt.Sprintf("%s:%v", c.Server, c.Port)
+
+	conn, err := net.DialTimeout("tcp", addr, TimeOut)
 	if err != nil {
 
 		return errors.New(fmt.Sprintf("[连接]建立失败：%s", err.Error()))
@@ -137,36 +135,6 @@ func (c *Client) connectServer() error {
 	c.conn = conn
 
 	log.Println("服务器连接成功")
-
-	return nil
-}
-func (c *Client) initiation() error {
-	if c.Server == "" {
-
-		c.Server = DefaultServer
-	}
-	if c.Username == "" {
-
-		c.Username = DefaultUsername
-	}
-	if c.Password == "" {
-
-		c.Password = DefaultPassword
-	}
-	if c.Protocol == "" {
-
-		c.Protocol = DefaultProtocol
-	}
-	if c.Port == 0 {
-
-		c.Port = DefaultPort
-	}
-	if c.Interval <= 0 {
-
-		c.Interval = DefaultInterval
-	}
-
-	c.pingTime = sync.Map{}
 
 	return nil
 }
@@ -219,4 +187,37 @@ func (c *Client) getUpdateInfo() update {
 	c.waitGroup.Wait()
 
 	return *ret
+}
+
+func NewClient(server, username, password, port string, debug bool) (*Client, error) {
+	c := Client{
+		Server:   DefaultServer,
+		Username: DefaultUsername,
+		Password: DefaultPassword,
+		Port:     DefaultPort,
+	}
+
+	if server != "" {
+
+		c.Server = server
+	}
+	if username != "" {
+
+		c.Username = username
+	}
+	if password != "" {
+
+		c.Password = password
+	}
+	if port != "" {
+
+		c.Port = port
+	}
+
+	c.Debug = debug
+	c.Protocol = DefaultProtocol
+	c.Interval = DefaultInterval
+	c.pingTime = sync.Map{}
+
+	return &c, nil
 }

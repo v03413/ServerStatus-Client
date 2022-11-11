@@ -1,56 +1,56 @@
 package main
 
 import (
-	ssClient "github.com/v03413/ServerStatus-Client/client"
+	"github.com/v03413/ServerStatus-Client/client"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 )
 
 func main() {
-	var client = ssClient.Client{}
-	var osSignals = make(chan os.Signal, 1)
+	var debug bool
+	var server, username, password, port string
 
 	for _, v := range os.Args {
 		if strings.HasPrefix(v, "SERVER=") {
 
-			client.Server = strings.TrimSpace(strings.Split(v, "SERVER=")[1])
+			server = strings.TrimSpace(strings.Split(v, "SERVER=")[1])
 		}
 		if strings.HasPrefix(v, "PORT=") {
 
-			client.Port, _ = strconv.ParseUint(strings.TrimSpace(strings.Split(v, "PORT=")[1]), 10, 64)
+			port = strings.TrimSpace(strings.Split(v, "PORT=")[1])
 		}
 		if strings.HasPrefix(v, "USER=") {
 
-			client.Username = strings.TrimSpace(strings.Split(v, "USER=")[1])
+			username = strings.TrimSpace(strings.Split(v, "USER=")[1])
 		}
 		if strings.HasPrefix(v, "PASSWORD=") {
 
-			client.Password = strings.TrimSpace(strings.Split(v, "PASSWORD=")[1])
+			password = strings.TrimSpace(strings.Split(v, "PASSWORD=")[1])
 		}
 		if strings.HasPrefix(v, "DEBUG=") {
 
-			client.Debug = strings.TrimSpace(strings.Split(v, "DEBUG=")[1]) != ""
+			debug = strings.TrimSpace(strings.Split(v, "DEBUG=")[1]) != ""
 		}
 	}
 
-	log.Printf("开始运行，当前版本：%v", ssClient.Version)
-
-	err := client.Start()
+	c, err := client.NewClient(server, username, password, port, debug)
 	if err != nil {
 
-		log.Println(err.Error())
-		signal.Notify(osSignals, os.Interrupt)
-		return
+		log.Fatalln(err.Error())
 	}
 
-	runtime.GC()
+	go c.Start()
+
+	log.Printf("开始运行，当前版本：%v", client.Version)
+
 	{
+		osSignals := make(chan os.Signal, 1)
 		signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
 		<-osSignals
+		runtime.GC()
 	}
 }
