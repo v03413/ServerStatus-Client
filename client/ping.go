@@ -28,7 +28,9 @@ func (c *Client) getPingTime(host string) uint {
 }
 
 func (c *Client) startPing() {
-	for range time.Tick(time.Second * time.Duration(c.Interval)) {
+	timeout := time.Second * time.Duration(c.Interval)
+
+	for range time.Tick(timeout) {
 		pingHost.Range(func(k, v interface{}) bool {
 			var ip *net.IPAddr
 			var lost *lostPacket
@@ -51,7 +53,7 @@ func (c *Client) startPing() {
 			}
 
 			var start = time.Now()
-			dial, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, ProbePort), time.Second*3)
+			dial, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, ProbePort), timeout)
 			if err == nil {
 				_ = dial.Close()
 
