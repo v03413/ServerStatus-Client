@@ -1,7 +1,7 @@
 package client
 
 import (
-	"io/ioutil"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -50,7 +50,7 @@ func getOpenWrtTupd() tupdStat {
 	//TCP_CLOSING = 0B
 
 	for _, file := range []string{"/proc/net/tcp", "/proc/net/tcp6"} {
-		if text, err := ioutil.ReadFile(file); err == nil {
+		if text, err := os.ReadFile(file); err == nil {
 			lines := strings.Split(string(text), "\n")
 			for _, line := range lines[1:] {
 				fields := strings.Fields(line)
@@ -65,7 +65,7 @@ func getOpenWrtTupd() tupdStat {
 	}
 
 	for _, file := range []string{"/proc/net/udp", "/proc/net/udp6"} {
-		if text, err := ioutil.ReadFile(file); err == nil {
+		if text, err := os.ReadFile(file); err == nil {
 			lines := strings.Split(string(text), "\n")
 			for _, line := range lines[1:] {
 				fields := strings.Fields(line)
@@ -79,7 +79,7 @@ func getOpenWrtTupd() tupdStat {
 		}
 	}
 
-	if hd, err := ioutil.ReadDir("/proc"); err == nil {
+	if hd, err := os.ReadDir("/proc"); err == nil {
 		for _, file := range hd {
 			if !isNumber(file.Name()) {
 
@@ -88,7 +88,7 @@ func getOpenWrtTupd() tupdStat {
 
 			process += 1
 
-			if text, err := ioutil.ReadFile("/proc/" + file.Name() + "/stat"); err == nil {
+			if text, err := os.ReadFile("/proc/" + file.Name() + "/stat"); err == nil {
 				fields := strings.Fields(string(text))
 				if t, err := strconv.ParseUint(fields[19], 10, 64); err == nil {
 
