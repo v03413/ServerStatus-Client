@@ -52,17 +52,10 @@ func (c *Client) Start() {
 	go c.startRun()
 }
 func (c *Client) startRun() {
-	if c.conn == nil {
-		err := c.connectServer()
-		if err != nil {
-			log.Println(err.Error())
-		} else {
-			defer func(conn net.Conn) {
-				_ = conn.Close()
+	defer func(conn net.Conn) {
+		_ = conn.Close()
 
-			}(c.conn)
-		}
-	}
+	}(c.conn)
 
 	for range time.Tick(time.Second * time.Duration(c.Interval)) {
 		var start = time.Now()
@@ -82,7 +75,7 @@ func (c *Client) startRun() {
 				_ = c.conn.Close()
 				log.Printf("[准备重连]发送失败：%s\n", err.Error())
 
-				if err = c.connectServer(); err != nil {
+				if err = c.Conn(); err != nil {
 
 					log.Printf("服务器重连失败：%s\n", err.Error())
 				}
@@ -92,7 +85,7 @@ func (c *Client) startRun() {
 		}
 	}
 }
-func (c *Client) connectServer() error {
+func (c *Client) Conn() error {
 	var recvData = make([]byte, 128)
 	var addr = fmt.Sprintf("%s:%v", c.Server, c.Port)
 
@@ -218,6 +211,11 @@ func NewClient(server, username, password, port string, debug bool) (*Client, er
 	c.Protocol = DefaultProtocol
 	c.Interval = DefaultInterval
 	c.pingTime = sync.Map{}
+
+	if err := c.Conn(); err != nil {
+
+		return nil, err
+	}
 
 	return &c, nil
 }
