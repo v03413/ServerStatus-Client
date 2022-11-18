@@ -1,6 +1,6 @@
 module github.com/v03413/ServerStatus-Client
 
-go 1.18
+go 1.19
 
 require github.com/shirou/gopsutil v2.21.11+incompatible
 
