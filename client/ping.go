@@ -34,14 +34,14 @@ func (c *Client) startPing() {
 		pingHost.Range(func(k, v interface{}) bool {
 			var lost *lostPacket
 
-			host := k.(string)
+			isp := k.(string)
 			domain := v.(string)
 
-			if host == "cm" {
+			if isp == "cm" {
 				lost = &CmLostPacket
-			} else if host == "cu" {
+			} else if isp == "cu" {
 				lost = &CuLostPacket
-			} else if host == "ct" {
+			} else if isp == "ct" {
 				lost = &CtLostPacket
 			} else {
 				return false
@@ -73,9 +73,15 @@ func (c *Client) startPing() {
 			}
 
 			stat := pinger.Statistics()
+			if stat.AvgRtt == 0 {
+
+				lost.Push(true)
+				c.pingTime.Store(isp, uint(time.Duration(0)))
+				return true
+			}
 
 			lost.Push(false)
-			c.pingTime.Store(host, uint(stat.AvgRtt/time.Millisecond))
+			c.pingTime.Store(isp, uint(stat.AvgRtt/time.Millisecond))
 
 			return true
 		})
