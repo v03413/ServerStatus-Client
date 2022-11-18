@@ -12,7 +12,7 @@ import (
 
 func main() {
 	var debug bool
-	var server, username, password, port string
+	var server, username, password, port, interval string
 
 	for _, v := range os.Args {
 		if strings.HasPrefix(v, "SERVER=") {
@@ -35,9 +35,13 @@ func main() {
 
 			debug = strings.TrimSpace(strings.Split(v, "DEBUG=")[1]) != ""
 		}
+		if strings.HasPrefix(v, "INTERVAL=") {
+
+			interval = strings.TrimSpace(strings.Split(v, "INTERVAL=")[1])
+		}
 	}
 
-	c, err := client.NewClient(server, username, password, port, debug)
+	c, err := client.NewClient(server, username, password, port, interval, debug)
 	if err != nil {
 
 		log.Fatalln(err.Error())

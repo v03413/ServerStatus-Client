@@ -182,12 +182,13 @@ func (c *Client) getUpdateInfo() update {
 	return *ret
 }
 
-func NewClient(server, username, password, port string, debug bool) (*Client, error) {
+func NewClient(server, username, password, port, interval string, debug bool) (*Client, error) {
 	c := Client{
 		Server:   DefaultServer,
 		Username: DefaultUsername,
 		Password: DefaultPassword,
 		Port:     DefaultPort,
+		Interval: DefaultInterval,
 	}
 
 	if server != "" {
@@ -206,10 +207,13 @@ func NewClient(server, username, password, port string, debug bool) (*Client, er
 
 		c.Port = port
 	}
+	if i, err := strconv.ParseUint(interval, 10, 64); err == nil && i != 0 {
+
+		c.Interval = i
+	}
 
 	c.Debug = debug
 	c.Protocol = DefaultProtocol
-	c.Interval = DefaultInterval
 	c.pingTime = sync.Map{}
 
 	if err := c.Conn(); err != nil {
