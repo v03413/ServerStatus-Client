@@ -37,12 +37,12 @@ type update struct {
 	IpStatus    bool    `json:"ip_status"`
 	NetWorkRx   uint64  `json:"network_rx"`
 	NetWorkTx   uint64  `json:"network_tx"`
-	Ping10010   float64 `json:"ping_10010"`
-	Ping10086   float64 `json:"ping_10086"`
-	Ping189     float64 `json:"ping_189"`
-	Time10010   uint    `json:"time_10010"`
-	Time10086   uint    `json:"time_10086"`
-	Time189     uint    `json:"time_189"`
+	PingCU      float64 `json:"ping_10010"`
+	PingCM      float64 `json:"ping_10086"`
+	PingCT      float64 `json:"ping_189"`
+	TimeCU      uint    `json:"time_10010"`
+	TimeCM      uint    `json:"time_10086"`
+	TimeCT      uint    `json:"time_189"`
 	Tcp         uint    `json:"tcp"`
 	Udp         uint    `json:"udp"`
 	Process     uint    `json:"process"`

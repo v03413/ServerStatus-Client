@@ -1,21 +1,21 @@
 package client
 
 import (
-	"fmt"
-	"net"
+	"github.com/go-ping/ping"
+	"log"
 	"sync"
 	"time"
 )
 
-var lostPacket10086 = newLostPacket(PingPacketHistoryLen)
-var lostPacket10010 = newLostPacket(PingPacketHistoryLen)
-var lostPacket189 = newLostPacket(PingPacketHistoryLen)
+var CmLostPacket = newLostPacket(PingPacketHistoryLen) // 移动
+var CuLostPacket = newLostPacket(PingPacketHistoryLen) // 联通
+var CtLostPacket = newLostPacket(PingPacketHistoryLen) // 电信
 var pingHost = sync.Map{}
 
 func init() {
-	pingHost.Store("10010", PingCu)
-	pingHost.Store("10086", PingCm)
-	pingHost.Store("189", PingCt)
+	pingHost.Store("cu", PingCu)
+	pingHost.Store("cm", PingCm)
+	pingHost.Store("ct", PingCt)
 }
 
 func (c *Client) getPingTime(host string) uint {
@@ -32,54 +32,68 @@ func (c *Client) startPing() {
 
 	for range time.Tick(timeout) {
 		pingHost.Range(func(k, v interface{}) bool {
-			var ip *net.IPAddr
 			var lost *lostPacket
 
 			host := k.(string)
 			domain := v.(string)
 
+			if host == "cm" {
+				lost = &CmLostPacket
+			} else if host == "cu" {
+				lost = &CuLostPacket
+			} else if host == "ct" {
+				lost = &CtLostPacket
+			} else {
+				return false
+			}
+
+			pinger, err := ping.NewPinger(domain)
+			if err != nil {
+
+				log.Println(err.Error())
+				return false
+			}
+
+			pinger.Timeout = timeout
+			pinger.Count = 1
+			pinger.SetPrivileged(true)
+
 			if c.Protocol == DefaultProtocol {
-				ip, _ = net.ResolveIPAddr(DefaultProtocol, domain)
+				pinger.SetNetwork("ipv4")
 			} else {
-				ip, _ = net.ResolveIPAddr("ip6", domain)
+				pinger.SetNetwork("ipv6")
 			}
 
-			if host == "10086" {
-				lost = &lostPacket10086
-			} else if host == "10010" {
-				lost = &lostPacket10010
-			} else {
-				lost = &lostPacket189
-			}
-
-			var start = time.Now()
-			dial, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", ip, ProbePort), timeout)
-			if err == nil {
-				_ = dial.Close()
-
-				lost.Push(false)
-				c.pingTime.Store(host, uint(time.Now().Sub(start).Milliseconds()))
-			} else {
+			err = pinger.Run()
+			if err != nil {
 				lost.Push(true)
+
+				log.Println(err.Error())
+				return false
 			}
+
+			stat := pinger.Statistics()
+
+			lost.Push(false)
+			c.pingTime.Store(host, uint(stat.AvgRtt/time.Millisecond))
 
 			return true
 		})
 	}
 }
 
-func (c *Client) getLostPacket(host string) float64 {
-	if host == "10086" {
+func (c *Client) getLostPacket(isp string) float64 {
+	if isp == "cm" {
 
-		return lostPacket10086.Get()
+		return CmLostPacket.Get()
 	}
-	if host == "10010" {
+	if isp == "cu" {
 
-		return lostPacket10010.Get()
+		return CuLostPacket.Get()
 	}
-	if host == "189" {
+	if isp == "ct" {
 
-		return lostPacket189.Get()
+		return CtLostPacket.Get()
 	}
 
 	return 0

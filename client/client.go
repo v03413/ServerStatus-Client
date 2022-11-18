@@ -7,6 +7,7 @@ import (
 	"github.com/shirou/gopsutil/load"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,10 +23,9 @@ const DefaultProtocol = "ip4"
 const PingPacketHistoryLen = 100
 const TimeOut = time.Second * 3
 
-const ProbePort = 80
-const PingCu = "cu.tz.cloudcpp.com"
-const PingCt = "ct.tz.cloudcpp.com"
-const PingCm = "cm.tz.cloudcpp.com"
+const PingCu = "cu.tz.vizan.cc"
+const PingCt = "ct.tz.vizan.cc"
+const PingCm = "cm.tz.vizan.cc"
 
 type Client struct {
 	Server    string
@@ -156,13 +156,13 @@ func (c *Client) getUpdateInfo() update {
 	c.waitGroup.Add(1)
 	go c.GetNetRate(ret)
 
-	ret.Ping10086 = c.getLostPacket("10086")
-	ret.Ping10010 = c.getLostPacket("10010")
-	ret.Ping189 = c.getLostPacket("189")
+	ret.PingCM = c.getLostPacket("cm")
+	ret.PingCU = c.getLostPacket("cu")
+	ret.PingCT = c.getLostPacket("ct")
 
-	ret.Time10086 = c.getPingTime("10086")
-	ret.Time10010 = c.getPingTime("10010")
-	ret.Time189 = c.getPingTime("189")
+	ret.TimeCM = c.getPingTime("cm")
+	ret.TimeCU = c.getPingTime("cu")
+	ret.TimeCT = c.getPingTime("ct")
 
 	c.waitGroup.Add(1)
 	go c.getDiskIo(ret)
