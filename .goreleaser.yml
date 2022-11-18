@@ -1,4 +1,4 @@
-project_name: ServerStatuc-Client
+project_name: ServerStatus-Client
 archives:
   - format: binary
 builds:
